@@ -26,3 +26,6 @@ ADD soh-test.hs /app/soh-test.hs
 ADD defcode.hs /app/defcode.hs
 RUN cd /app && ghc -threaded -O2 -rtsopts -with-rtsopts=-N soh-test.hs
 RUN chown -R nobody /app
+
+ADD run.sh /app/run.sh
+CMD ["/app/run.sh"]
