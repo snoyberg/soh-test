@@ -60,7 +60,7 @@ postHomeR = do
                         port <- atomicModifyIORef iport $ \p -> let p' = p + 1 in (p', p')
                         let env' = insertMap "PORT" (show port) env0
                             fp' = dropExtension fp
-                        (ClosedStream, ClosedStream, ClosedStream, _sph) <-
+                        (ClosedStream, Inherited, Inherited, _sph) <-
                             streamingProcess (proc fp' [])
                                 { env = Just env'
                                 }
@@ -68,7 +68,7 @@ postHomeR = do
                         withSystemTempFile "ngrokconfig.yml" $ \fp h -> do
                             hPut h $ encode $ NgrokConfig auth name port
                             hClose h
-                            (ClosedStream, ClosedStream, ClosedStream, _sph) <-
+                            (ClosedStream, Inherited, Inherited, _sph) <-
                                 streamingProcess (proc "./ngrok" ["start", "-config", fp, "--all"])
                             threadDelay 100000
                             return name
