@@ -4,4 +4,4 @@ set -e
 set -x
 
 cd /app
-sudo -u nobody -E /app/soh-test
+sudo -u nobody -E env "PATH=$PATH" /app/soh-test
