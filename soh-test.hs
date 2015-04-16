@@ -9,7 +9,7 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async
 import System.FilePath (dropExtension)
 
-data App = App Int [(String, String)]
+data App = App Int [(String, String)] (MVar (Maybe StreamingProcessHandle))
 
 mkYesod "App" [parseRoutes|
 / HomeR GET POST
@@ -37,14 +37,15 @@ postHomeR = do
                     <*> Concurrently (waitForStreamingProcess sph)
             if ec == ExitSuccess
                 then do
-                    App userPort env' <- getYesod
-                    liftIO $ do
+                    App userPort env' var <- getYesod
+                    liftIO $ modifyMVar_ var $ \moldSPH -> do
+                        forM_ moldSPH $ terminateProcess . streamingProcessHandleRaw
                         let fp' = dropExtension fp
-                        (ClosedStream, Inherited, Inherited, _sph) <-
+                        (ClosedStream, Inherited, Inherited, sph) <-
                             streamingProcess (proc fp' [])
                                 { env = Just env'
                                 }
-                        return ()
+                        return $ Just sph
                     defaultLayout $ do
                         setTitle "Started"
                         [whamlet|
@@ -81,5 +82,6 @@ main = do
                     Nothing -> error $ "USER_PORT not a valid port: " ++ p
                     Just i -> return i
     -- FIXME in future, reverse proxy to the user port
-    let app = App userPort $ insertMap "PORT" (show userPort) env0
+    var <- newMVar Nothing
+    let app = App userPort (insertMap "PORT" (show userPort) env0) var
     warpEnv app
