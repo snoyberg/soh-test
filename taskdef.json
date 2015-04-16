@@ -1,0 +1,40 @@
+{
+  "taskDefinitionArn": "arn:aws:ecs:us-east-1:105814010004:task-definition/soh-test:3",
+  "revision": 3,
+  "containerDefinitions": [
+    {
+      "volumesFrom": [],
+      "portMappings": [
+        {
+          "hostPort": 0,
+          "containerPort": 5000
+        },
+        {
+          "hostPort": 0,
+          "containerPort": 5001
+        }
+      ],
+      "command": [],
+      "environment": [
+        {
+          "name": "USER_PORT",
+          "value": "5001"
+        },
+        {
+          "name": "PORT",
+          "value": "5000"
+        }
+      ],
+      "essential": true,
+      "entryPoint": [],
+      "links": [],
+      "mountPoints": [],
+      "memory": 512,
+      "name": "soh-test",
+      "cpu": 512,
+      "image": "snoyberg/soh-test"
+    }
+  ],
+  "volumes": [],
+  "family": "soh-test"
+}
