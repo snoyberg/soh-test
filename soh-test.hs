@@ -8,26 +8,8 @@ import System.Environment
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async
 import System.FilePath (dropExtension)
-import Data.UUID (toString)
-import Data.UUID.V4
-import Data.Yaml (encode)
 
-data NgrokConfig = NgrokConfig
-    Text -- authtoken
-    Text -- subdomain
-    Int -- port
-instance ToJSON NgrokConfig where
-    toJSON (NgrokConfig auth subd port) = object
-        [ "authtoken" .= auth
-        , "tunnels" .= object
-            [ subd .= object
-                [ "proto" .= asText "http"
-                , "addr" .= port
-                ]
-            ]
-        ]
-
-data App = App Text (IORef Int) [(String, String)]
+data App = App Int [(String, String)]
 
 mkYesod "App" [parseRoutes|
 / HomeR GET POST
@@ -55,29 +37,19 @@ postHomeR = do
                     <*> Concurrently (waitForStreamingProcess sph)
             if ec == ExitSuccess
                 then do
-                    App auth iport env0 <- getYesod
-                    name <- liftIO $ do
-                        port <- atomicModifyIORef iport $ \p -> let p' = p + 1 in (p', p')
-                        let env' = insertMap "PORT" (show port) env0
-                            fp' = dropExtension fp
+                    App userPort env' <- getYesod
+                    liftIO $ do
+                        let fp' = dropExtension fp
                         (ClosedStream, Inherited, Inherited, _sph) <-
                             streamingProcess (proc fp' [])
                                 { env = Just env'
                                 }
-                        name <- (pack . toString) <$> nextRandom
-                        withSystemTempFile "ngrokconfig.yml" $ \fp h -> do
-                            hPut h $ encode $ NgrokConfig auth name port
-                            hClose h
-                            (ClosedStream, Inherited, Inherited, _sph) <-
-                                streamingProcess (proc "./ngrok" ["start", "-config", fp, "--all"])
-                            threadDelay 100000
-                            return name
+                        return ()
                     defaultLayout $ do
                         setTitle "Started"
-                        let url = concat ["https://", name, ".ngrok.io/"]
                         [whamlet|
                             <h1>Started
-                            <a href=#{url}>#{url}
+                            <p>Connect to port #{userPort}
                         |]
                 else defaultLayout $ do
                     setTitle "Compilation Failed"
@@ -101,8 +73,13 @@ postHomeR = do
 main :: IO ()
 main = do
     env0 <- getEnvironment
-    app <- App
-        <$> (pack <$> getEnv "NGROK_AUTH")
-        <*> newIORef 10000
-        <*> pure (deleteMap "NGROK_AUTH" $ deleteMap "PORT" env0)
+    userPort <-
+        case lookup "USER_PORT" env0 of
+            Nothing -> error "USER_PORT not set"
+            Just p ->
+                case readMay p of
+                    Nothing -> error $ "USER_PORT not a valid port: " ++ p
+                    Just i -> return i
+    -- FIXME in future, reverse proxy to the user port
+    let app = App userPort $ insertMap "PORT" (show userPort) env0
     warpEnv app

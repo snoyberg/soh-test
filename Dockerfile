@@ -16,11 +16,7 @@ ENV PATH /app/.cabal/bin:/usr/local/sbin:/usr/local/bin:/opt/ghc/7.8.4/bin:/opt/
 
 RUN cabal update
 RUN wget https://www.stackage.org/lts/cabal.config
-RUN cabal install classy-prelude-yesod temporary uuid
-RUN wget https://dl.ngrok.com/ngrok_2.0.15_linux_amd64.zip && \
-    unzip ngrok_2.0.15_linux_amd64.zip && \
-    mv ngrok /app && \
-    rm -f ngrok_2.0.15_linux_amd64.zip 
+RUN cabal install classy-prelude-yesod temporary
 
 ADD soh-test.hs /app/soh-test.hs
 ADD defcode.hs /app/defcode.hs
